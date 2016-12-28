@@ -27,7 +27,10 @@ import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.util.concurrent.ArrayBlockingQueue;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+
 
 public class TestPutUDP {
 
