@@ -55,11 +55,13 @@ public abstract class AbstractPutEventProcessor extends AbstractSessionFactoryPr
             .description("The ip address or hostname of the destination.")
             .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
             .defaultValue("localhost")
+            .expressionLanguageSupported(true)
             .required(true)
             .build();
     public static final PropertyDescriptor PORT = new PropertyDescriptor
             .Builder().name("Port")
             .description("The port on the destination.")
+            .expressionLanguageSupported(true)
             .required(true)
             .addValidator(StandardValidators.PORT_VALIDATOR)
             .build();

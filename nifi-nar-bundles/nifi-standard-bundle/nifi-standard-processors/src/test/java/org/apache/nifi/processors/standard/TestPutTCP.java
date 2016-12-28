@@ -26,9 +26,9 @@ public class TestPutTCP extends TestPutTCPCommon {
     }
 
     @Override
-    public void configureProperties(String host, int port, String outgoingMessageDelimiter, boolean connectionPerFlowFile, boolean expectValid) {
+    public void configureProperties(String host, String port, String outgoingMessageDelimiter, boolean connectionPerFlowFile, boolean expectValid) {
         runner.setProperty(PutTCP.HOSTNAME, host);
-        runner.setProperty(PutTCP.PORT, Integer.toString(port));
+        runner.setProperty(PutTCP.PORT, port);
         if (outgoingMessageDelimiter != null) {
             runner.setProperty(PutTCP.OUTGOING_MESSAGE_DELIMITER, outgoingMessageDelimiter);
         }

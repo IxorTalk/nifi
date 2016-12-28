@@ -30,15 +30,16 @@ import java.net.InetAddress;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.Assert.*;
 
 public abstract class TestPutTCPCommon {
     private final static String TCP_SERVER_ADDRESS = "127.0.0.1";
     private final static String UNKNOWN_HOST = "fgdsfgsdffd";
     private final static String INVALID_IP_ADDRESS = "300.300.300.300";
+    private final static String EL_PROPERTY_TCP_ADDRESS = "tcp.server.address";
+    private final static String EL_PROPERTY_TCP_PORT = "tcp.server.port";
+    private final static String EL_EXPRESSION_TCP_ADDRESS = "${" + EL_PROPERTY_TCP_ADDRESS + "}";
+    private final static String EL_EXPRESSION_TCP_PORT = "${" + EL_PROPERTY_TCP_PORT + "}";
     private final static int MIN_INVALID_PORT = 0;
     private final static int MIN_VALID_PORT = 1;
     private final static int MAX_VALID_PORT = 65535;
@@ -58,7 +59,7 @@ public abstract class TestPutTCPCommon {
     private final static String OUTGOING_MESSAGE_DELIMITER_MULTI_CHAR = "{delimiter}\r\n";
 
     private TCPTestServer server;
-    private int tcp_server_port;
+    private String tcp_server_port;
     private ArrayBlockingQueue<List<Byte>> recvQueue;
 
     public boolean ssl;
@@ -77,7 +78,7 @@ public abstract class TestPutTCPCommon {
     private synchronized TCPTestServer createTestServer(final String address, final ArrayBlockingQueue<List<Byte>> recvQueue, final String delimiter) throws Exception {
         TCPTestServer server = new TCPTestServer(InetAddress.getByName(address), recvQueue, delimiter);
         server.startServer(ssl);
-        tcp_server_port = server.getPort();
+        tcp_server_port = Integer.toString(server.getPort());
         return server;
     }
 
@@ -102,6 +103,34 @@ public abstract class TestPutTCPCommon {
         checkReceivedAllData(recvQueue, VALID_FILES);
         checkInputQueueIsEmpty();
         checkTotalNumConnections(server, 1);
+    }
+
+
+    @Test(timeout = LONG_TEST_TIMEOUT_PERIOD)
+    public void testValidFilesWithElExpression() throws Exception {
+        server = createTestServer(TCP_SERVER_ADDRESS, recvQueue, OUTGOING_MESSAGE_DELIMITER);
+        runner.setVariable(EL_PROPERTY_TCP_ADDRESS,TCP_SERVER_ADDRESS);
+        runner.setVariable(EL_PROPERTY_TCP_PORT,tcp_server_port);
+        configureProperties(EL_EXPRESSION_TCP_ADDRESS, EL_EXPRESSION_TCP_PORT, OUTGOING_MESSAGE_DELIMITER, false, true);
+        sendTestData(VALID_FILES);
+        checkReceivedAllData(recvQueue, VALID_FILES);
+        checkInputQueueIsEmpty();
+        checkTotalNumConnections(server, 1);
+    }
+
+
+    @Test(timeout = LONG_TEST_TIMEOUT_PERIOD)
+    public void testUnkownHostnameWithElExpression() throws Exception {
+        server = createTestServer(TCP_SERVER_ADDRESS, recvQueue, OUTGOING_MESSAGE_DELIMITER);
+        runner.setVariable(EL_PROPERTY_TCP_ADDRESS,UNKNOWN_HOST);
+        runner.setVariable(EL_PROPERTY_TCP_PORT,tcp_server_port);
+        configureProperties(EL_EXPRESSION_TCP_ADDRESS, EL_EXPRESSION_TCP_PORT, OUTGOING_MESSAGE_DELIMITER, false, true);
+        sendTestData(VALID_FILES);
+        Thread.sleep(10);
+        checkRelationships(0, VALID_FILES.length);
+        checkNoDataReceived(recvQueue);
+        checkInputQueueIsEmpty();
+        checkTotalNumConnections(server, 0);
     }
 
     @Test(timeout = DEFAULT_TEST_TIMEOUT_PERIOD)
@@ -216,10 +245,10 @@ public abstract class TestPutTCPCommon {
 
     @Test(timeout = DEFAULT_TEST_TIMEOUT_PERIOD)
     public void testInvalidPort() throws Exception {
-        configureProperties(UNKNOWN_HOST, MIN_INVALID_PORT, OUTGOING_MESSAGE_DELIMITER, false, false);
-        configureProperties(UNKNOWN_HOST, MIN_VALID_PORT, OUTGOING_MESSAGE_DELIMITER, false, true);
-        configureProperties(UNKNOWN_HOST, MAX_VALID_PORT, OUTGOING_MESSAGE_DELIMITER, false, true);
-        configureProperties(UNKNOWN_HOST, MAX_INVALID_PORT, OUTGOING_MESSAGE_DELIMITER, false, false);
+        configureProperties(UNKNOWN_HOST, Integer.toString(MIN_INVALID_PORT), OUTGOING_MESSAGE_DELIMITER, false, false);
+        configureProperties(UNKNOWN_HOST, Integer.toString(MIN_VALID_PORT), OUTGOING_MESSAGE_DELIMITER, false, true);
+        configureProperties(UNKNOWN_HOST, Integer.toString(MAX_VALID_PORT), OUTGOING_MESSAGE_DELIMITER, false, true);
+        configureProperties(UNKNOWN_HOST, Integer.toString(MAX_INVALID_PORT), OUTGOING_MESSAGE_DELIMITER, false, false);
     }
 
     @Test(timeout = LONG_TEST_TIMEOUT_PERIOD)
@@ -238,7 +267,7 @@ public abstract class TestPutTCPCommon {
         assertEquals(expectedTotalNumConnections, server.getTotalNumConnections());
     }
 
-    public abstract void configureProperties(final String host, final int port, final String outgoingMessageDelimiter, final boolean connectionPerFlowFile,
+    public abstract void configureProperties(final String host, final String port, final String outgoingMessageDelimiter, final boolean connectionPerFlowFile,
                                              final boolean expectValid) throws InitializationException;
 
     private void sendTestData(final String[] testData) {

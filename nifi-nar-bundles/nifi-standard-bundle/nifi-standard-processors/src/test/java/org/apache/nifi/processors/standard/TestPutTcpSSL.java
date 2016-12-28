@@ -34,9 +34,9 @@ public class TestPutTcpSSL extends TestPutTCPCommon {
     }
 
     @Override
-    public void configureProperties(String host, int port, String outgoingMessageDelimiter, boolean connectionPerFlowFile, boolean expectValid) throws InitializationException {
+    public void configureProperties(String host, String port, String outgoingMessageDelimiter, boolean connectionPerFlowFile, boolean expectValid) throws InitializationException {
         runner.setProperty(PutTCP.HOSTNAME, host);
-        runner.setProperty(PutTCP.PORT, Integer.toString(port));
+        runner.setProperty(PutTCP.PORT, port);
 
         final StandardSSLContextService sslService = new StandardSSLContextService();
         runner.addControllerService("ssl-context", sslService, sslProperties);

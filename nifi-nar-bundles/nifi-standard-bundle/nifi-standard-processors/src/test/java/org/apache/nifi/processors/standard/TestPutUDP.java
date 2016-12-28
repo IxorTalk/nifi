@@ -16,13 +16,6 @@
  */
 package org.apache.nifi.processors.standard;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-
-import java.net.DatagramPacket;
-import java.net.InetAddress;
-import java.util.concurrent.ArrayBlockingQueue;
 import org.apache.nifi.util.TestRunner;
 import org.apache.nifi.util.TestRunners;
 import org.junit.After;
@@ -30,11 +23,21 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import java.net.DatagramPacket;
+import java.net.InetAddress;
+import java.util.concurrent.ArrayBlockingQueue;
+
+import static org.junit.Assert.*;
+
 public class TestPutUDP {
 
     private final static String UDP_SERVER_ADDRESS = "127.0.0.1";
     private final static String UNKNOWN_HOST = "fgdsfgsdffd";
     private final static String INVALID_IP_ADDRESS = "300.300.300.300";
+    private final static String EL_PROPERTY_UDP_ADDRESS = "udp.server.address";
+    private final static String EL_PROPERTY_UDP_PORT = "udp.server.port";
+    private final static String EL_EXPRESSION_UDP_ADDRESS = "${" + EL_PROPERTY_UDP_ADDRESS + "}";
+    private final static String EL_EXPRESSION_UDP_PORT = "${" + EL_PROPERTY_UDP_PORT + "}";
     private final static int BUFFER_SIZE = 1024;
     private final static int VALID_LARGE_FILE_SIZE = 32768;
     private final static int VALID_SMALL_FILE_SIZE = 64;
@@ -100,6 +103,16 @@ public class TestPutUDP {
     }
 
     @Test(timeout = DEFAULT_TEST_TIMEOUT_PERIOD)
+    public void testValidFilesWithElExpresson() throws Exception {
+        runner.setVariable(EL_PROPERTY_UDP_ADDRESS,UDP_SERVER_ADDRESS);
+        runner.setVariable(EL_PROPERTY_UDP_PORT,Integer.toString(server.getLocalPort()));
+        configureProperties(EL_EXPRESSION_UDP_ADDRESS, EL_EXPRESSION_UDP_PORT, true);
+        sendTestData(VALID_FILES);
+        checkReceivedAllData(VALID_FILES);
+        checkInputQueueIsEmpty();
+    }
+
+    @Test(timeout = DEFAULT_TEST_TIMEOUT_PERIOD)
     public void testEmptyFile() throws Exception {
         configureProperties(UDP_SERVER_ADDRESS, true);
         sendTestData(EMPTY_FILE);
@@ -136,6 +149,16 @@ public class TestPutUDP {
     @Test(timeout = LONG_TEST_TIMEOUT_PERIOD)
     public void testInvalidIPAddress() throws Exception {
         configureProperties(INVALID_IP_ADDRESS, true);
+        sendTestData(VALID_FILES);
+        checkNoDataReceived();
+        checkRelationships(0, VALID_FILES.length);
+        checkInputQueueIsEmpty();
+    }
+
+    @Test(timeout = LONG_TEST_TIMEOUT_PERIOD)
+    public void testInvalidIPAddressWithElExpression() throws Exception {
+        runner.setVariable(EL_PROPERTY_UDP_ADDRESS,INVALID_IP_ADDRESS);
+        configureProperties(EL_EXPRESSION_UDP_ADDRESS, true);
         sendTestData(VALID_FILES);
         checkNoDataReceived();
         checkRelationships(0, VALID_FILES.length);
@@ -184,8 +207,12 @@ public class TestPutUDP {
     }
 
     private void configureProperties(final String host, final boolean expectValid) {
+        configureProperties(host,Integer.toString(server.getLocalPort()),expectValid);
+    }
+
+    private void configureProperties(final String host, final String port, final boolean expectValid) {
         runner.setProperty(PutUDP.HOSTNAME, host);
-        runner.setProperty(PutUDP.PORT, Integer.toString(server.getLocalPort()));
+        runner.setProperty(PutUDP.PORT, port);
         if (expectValid) {
             runner.assertValid();
         } else {
